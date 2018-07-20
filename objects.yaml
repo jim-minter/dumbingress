@@ -1,0 +1,86 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dumbingress
+
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  name: dumbingress
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - extensions
+  resources:
+  - ingresses
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - extensions
+  resources:
+  - ingresses/status
+  verbs:
+  - update
+
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: dumbingress
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: dumbingress
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: dumbingress
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dumbingress
+  namespace: dumbingress
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dumbingress
+  template:
+    metadata:
+      labels:
+        app: dumbingress
+    spec:
+      containers:
+      - name: dumbingress
+        image: docker.io/jimminter/dumbingress:latest
+        imagePullPolicy: Always
+        ports:
+        - name: https
+          containerPort: 8443
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: dumbingress
+  namespace: dumbingress
+spec:
+  type: LoadBalancer
+  selector:
+    app: dumbingress
+  ports:
+  - name: https
+    port: 443
+    targetPort: 8443
